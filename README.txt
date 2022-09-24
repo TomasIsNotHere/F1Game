@@ -1,0 +1,5 @@
+  
+game - 
+    trasa upravit
+    OBRAZKY
+
