@@ -2,34 +2,85 @@ from shutil import move
 import pygame
 import time
 import math
-from lib import *
-import button
+from other.lib import *
+import other.button as button
 
 pygame.init()
 
+def menu():
+    
+    WINDOW = pygame.display.set_mode((800,600))
+    pygame.display.set_caption("race game")
+    
+    
+    bckgroundImg = scale(pygame.image.load('img/menubckground.jpg'), 0.5)
+    infoImg = pygame.image.load('img/info.png')
+    playBtnImg = pygame.image.load('img/playbtn.png')
+    exitBtnImg = pygame.image.load('img/exitbtn.png')
+    infoBtnImg = pygame.image.load('img/infobtn.png')
+    
+    playBtn = button.Button(285,125,playBtnImg,1)
+    exitBtn = button.Button(285,375,exitBtnImg,1)
+    infoBtn = button.Button(285,250,infoBtnImg,1)
+   
+    i = 2000
+    menu_state = "menu"
+    while True:
+        
+        WINDOW.blit(bckgroundImg, (0,0))
+        
+        if menu_state == "menu":
+            if playBtn.draw(WINDOW):
+                i = 0
+                break
+            if exitBtn.draw(WINDOW):
+                i = 1
+                break
+            if infoBtn.draw(WINDOW):
+                menu_state = "info"
+        if menu_state == "info":
+            WINDOW.blit(infoImg, (30,175))
+            if exitBtn.draw(WINDOW):
+                menu_state = 'menu'
+                
+        esc = pygame.key.get_pressed()
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                i = 1
+                return i
+                    
+        pygame.display.update()
+        
+    pygame.quit()
+    return i
+            
 def game():
-    #track, border, background 
+    
+    #track, border, background, press key img 
     ASPHALT = pygame.image.load("img/asphalt.jpg")
     TRACK = scale(pygame.image.load("img/map1.png"),1)
     BORDER = scale(pygame.image.load("img/map1border.png"),1)
     BORDERMASK = pygame.mask.from_surface(BORDER)   
+    WAIT = pygame.image.load("img/wait.png")
+    
     #finishline 
-    FINISHLINE = scale(pygame.image.load("img/endline.png"), 0.13)
+    FINISHLINE = scale(pygame.image.load("img/endline.png"), 0.12)
     FINISHLINE = pygame.transform.rotate(FINISHLINE, 270)
     FINISHLINE_MASK = pygame.mask.from_surface(FINISHLINE)
-    FINISLINE_POSITION = (34,240)
+    FINISLINE_POSITION = (38,240)
+    
     #checkpoint
-    CHECKPOINT = scale(pygame.image.load("img/checkpint.png"), 0.13)
+    CHECKPOINT = scale(pygame.image.load("img/checkpint.png"), 0.12)
     CHECKPOINT = pygame.transform.rotate(CHECKPOINT, 270)
     CHECKPOINTMASK = pygame.mask.from_surface(CHECKPOINT)
-    CHECKPOINTPOSITION = (34, 260)
+    CHECKPOINTPOSITION = (38, 260)
+    
     #cars 
     REDCAR = scale(pygame.image.load("img/redcar.png"), 0.040)
     GREENCAR = scale(pygame.image.load("img/greencar.png"), 0.040)
     PATH = [(140, 66),(168, 274), (267, 262), (333, 105), (419, 254), (551, 268), (588, 117), (670, 268), (663, 579), (552, 577), (524, 415), (122, 408), (63, 243)]   
-    #window size based on img 
-    WIDTH = TRACK.get_width()
-    HEIGHT = TRACK.get_height()
+    
     #window 
     WINDOW = pygame.display.set_mode((740,700))
     pygame.display.set_caption("race game")
@@ -150,16 +201,15 @@ def game():
             self.calAngle()
             self.updatePathPoints()
             super().move()
-        
             
     #variables  
     FPS = 60 
-    run = True 
     gameStart = False
     clock = pygame.time.Clock()
     images = [(ASPHALT, (0,0)), (TRACK, (0,0)),(FINISHLINE, FINISLINE_POSITION),(BORDER, (0,0)), (CHECKPOINT, CHECKPOINTPOSITION)]
     red_car = PlayerCar(3,3)
     green_car = ComputerCar(3.6,3.6,PATH)
+    i = 2000
     
     def map(win,images):
         #map printing loop 
@@ -169,7 +219,6 @@ def game():
         green_car.draw(win)
         pygame.display.update()
             
-    #first player  
     def movementOne():
         keys = pygame.key.get_pressed()
         moved = False        
@@ -194,7 +243,7 @@ def game():
         else: 
             pass
         
-    def ending(run):
+    def ending(i):
         #checkpoint check -> swap to true 
         check_bool =  red_car.collision(CHECKPOINTMASK, *CHECKPOINTPOSITION)
         if check_bool != None: 
@@ -203,138 +252,128 @@ def game():
         #finish line for computer car
         computerCar = green_car.collision(FINISHLINE_MASK, *FINISLINE_POSITION)
         if computerCar != None:
-            winOrLose = False
-            run = False
-            winLoseScreen(winOrLose)
+            i = 1
 
             
         #finish line -> race end only if player pick up checkpoint 
         playerCar = red_car.collision(FINISHLINE_MASK, *FINISLINE_POSITION)
         results = red_car.checkpointResult()
         if playerCar != None and results == True:
-            winOrLose = True
-            run = False
-            winLoseScreen(winOrLose)
+            i = 0
         elif playerCar != None and results == False:
             red_car.bounce()
+            
+        return i 
                        
         
     #game loop 
-    while run:
+    while True:
         clock.tick(FPS)
         map(WINDOW, images)  
-        font = pygame.font.SysFont('arialblack', 40)
+        
+        #start after player press any key or esc
         while not gameStart == True:
-                center_text(WINDOW,font, "press any key to start")
+                WINDOW.blit(WAIT,(0,250))
                 pygame.display.update()
                 for event in pygame.event.get():
-                    if event.type == pygame.QUIT:
+                    esc = pygame.key.get_pressed()
+                    if event.type == pygame.QUIT or esc[pygame.K_ESCAPE]:
                         pygame.quit()
-                        break
-                    if event.type == pygame.KEYDOWN:
-                        gameStart = True
+                        results = 2
+                        return results
+                    elif event.type == pygame.KEYDOWN:
+                        gameStart = True    
         #close window 
         esc = pygame.key.get_pressed()
         for event in pygame.event.get():
             if event.type == pygame.QUIT or esc[pygame.K_ESCAPE]:
-                run = False
-                menuSett()
-
+                pygame.quit()
+                results = 2
+                return results
+                
         green_car.move()
         movementOne()
         collisionCheck()
-        ending(run)
+        results = ending(i)
+        if results == 0 or results == 1:
+            break
     
     pygame.quit()
-
-def menuSett():
-    MENUWIN = pygame.display.set_mode((800,600))
-    pygame.display.set_caption("Race Game Menu")
-
-    font = pygame.font.SysFont('arialblack', 40)
-
-    TEXT_COL = (255,255,255)
-
-    playImg = pygame.image.load('img/playbtn.png').convert_alpha()
-    infoImg = pygame.image.load('img/infobtn.png').convert_alpha()
-    exitImg = pygame.image.load('img/exitbtn.png').convert_alpha()
-    bckgroundImg = scale(pygame.image.load('img/menubckground.jpg'), 0.5)
-
-    playBtn = button.Button(285,125,playImg,1)
-    infoBtn = button.Button(285,250,infoImg,1)
-    exitBtn = button.Button(285,375,exitImg,1)
-
-
-    menu_state = 'menu'
-    menuRun = True
-    while menuRun:
-        
-        MENUWIN.blit(bckgroundImg, (0,0))
-        
-        if menu_state == 'menu':
-            if playBtn.draw(MENUWIN):
-                menuRun = False
-                game()
-            if  infoBtn.draw(MENUWIN):
-                menu_state = 'info'
-            if exitBtn.draw(MENUWIN):
-                menuRun = False
-                break
-            
-        if menu_state == 'info':
-            info(font, TEXT_COL,MENUWIN)
-            if exitBtn.draw(MENUWIN):
-                menu_state = 'menu'
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT or esc[pygame.K_ESCAPE]:
-                    menu_state = 'menu'
-                    break
-                
-        esc = pygame.key.get_pressed()
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT or esc[pygame.K_ESCAPE]:
-                menuRun = False
-                break
-            
-        pygame.display.update()
-        
-    pygame.quit()
+    return results
 
 def winLoseScreen(winOrLose):
     
-    WINLOSEWIN = pygame.display.set_mode((800,600))
+    WINDOW = pygame.display.set_mode((800,600))
     pygame.display.set_caption("Race Game")
     
     bckgroundImg = scale(pygame.image.load('img/endingbckground.png'), 0.5)
     playImg = pygame.image.load('img/playbtn.png').convert_alpha()
     exitImg = pygame.image.load('img/exitbtn.png').convert_alpha()
+    winImg = pygame.image.load('img/winimg.png')
+    loseImg = pygame.image.load('img/loseimg.png')
     playBtn = button.Button(285,125,playImg,1)
     exitBtn = button.Button(285,375,exitImg,1)
     
-    font = pygame.font.SysFont('arialblack', 40)
 
-    
-    choice = True
-    while choice: 
-        WINLOSEWIN.blit(bckgroundImg, (0,0))
-        if winOrLose == True:
-            center_text(WINLOSEWIN,font,"Victory")
-            if exitBtn.draw(WINLOSEWIN):
-                choice = False
-                menuSett()
-            if playBtn.draw(WINLOSEWIN):
-                choice = False
-                game()
-        else : 
-            center_text(WINLOSEWIN,font,"Lose")
-            if exitBtn.draw(WINLOSEWIN):
-                choice = False
-                menuSett()
-            if playBtn.draw(WINLOSEWIN):
-                choice = False
-                game()
+    i = 2000
+    while True: 
+        
+        WINDOW.blit(bckgroundImg, (0,0))
+        
+        if winOrLose == 0:
+            WINDOW.blit(winImg, (145,205))
+            if exitBtn.draw(WINDOW):
+                i = 0
+                break
+            if playBtn.draw(WINDOW):
+                i = 1
+                break
+
+        elif winOrLose == 1: 
+            WINDOW.blit(loseImg, (145,205))
+            if exitBtn.draw(WINDOW):
+                i = 0
+                break
+            if playBtn.draw(WINDOW):
+                i = 1
+                break
+            
+        esc = pygame.key.get_pressed()
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT or esc[pygame.K_ESCAPE]:
+                i = 0
+                break
 
         pygame.display.update()
+        
     pygame.quit()
+    return i 
     
-menuSett()
+state = "menu"
+while True:
+    if state == "menu":
+        results = menu()
+        if results == 0:
+            state = "game"
+        elif results == 1:
+            state = "exit"
+    if state == "game":
+        results = game()
+        if results == 0:
+            choice = winLoseScreen(results)
+            if choice == 1:
+                state = "game"
+            elif choice == 0:
+                state = "menu"
+        elif results == 1:
+            choice = winLoseScreen(results)
+            if choice == 1:
+                state = "game"
+            elif choice == 0:
+                state = "menu"
+        elif results == 2:
+            state = "menu"
+    if state == "exit":
+        break
+    
+pygame.quit()
