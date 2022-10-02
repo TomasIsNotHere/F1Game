@@ -8,17 +8,17 @@ import other.button as button
 pygame.init()
 
 def menu():
-    
+    #window set
     WINDOW = pygame.display.set_mode((800,600))
     pygame.display.set_caption("race game")
     
-    
+    #img 
     bckgroundImg = scale(pygame.image.load('img/menubckground.jpg'), 0.5)
     infoImg = pygame.image.load('img/info.png')
     playBtnImg = pygame.image.load('img/playbtn.png')
     exitBtnImg = pygame.image.load('img/exitbtn.png')
     infoBtnImg = pygame.image.load('img/infobtn.png')
-    
+    #buttons 
     playBtn = button.Button(285,125,playBtnImg,1)
     exitBtn = button.Button(285,375,exitBtnImg,1)
     infoBtn = button.Button(285,250,infoBtnImg,1)
@@ -26,9 +26,10 @@ def menu():
     i = 2000
     menu_state = "menu"
     while True:
-        
+        #background print
         WINDOW.blit(bckgroundImg, (0,0))
         
+        #menu 
         if menu_state == "menu":
             if playBtn.draw(WINDOW):
                 i = 0
@@ -43,6 +44,7 @@ def menu():
             if exitBtn.draw(WINDOW):
                 menu_state = 'menu'
                 
+        #exit 
         esc = pygame.key.get_pressed()
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -57,7 +59,7 @@ def menu():
             
 def game():
     
-    #track, border, background, press key img 
+    #imgs
     ASPHALT = pygame.image.load("img/asphalt.jpg")
     TRACK = scale(pygame.image.load("img/map1.png"),1)
     BORDER = scale(pygame.image.load("img/map1border.png"),1)
@@ -79,13 +81,14 @@ def game():
     #cars 
     REDCAR = scale(pygame.image.load("img/redcar.png"), 0.040)
     GREENCAR = scale(pygame.image.load("img/greencar.png"), 0.040)
+    #green car race path
     PATH = [(140, 66),(168, 274), (267, 262), (333, 105), (419, 254), (551, 268), (588, 117), (670, 268), (663, 579), (552, 577), (524, 415), (122, 408), (63, 243)]   
     
     #window 
     WINDOW = pygame.display.set_mode((740,700))
     pygame.display.set_caption("race game")
 
-
+    #shared functions for cars 
     class Abstract:
         def __init__(self, max_velocity, rotation_velocity):
             self.img = self.IMG
@@ -96,14 +99,17 @@ def game():
             self.x, self.y = self.START_POS
             self.acceleration = 0.1
             self.check_P = False
+            
         #rotation of car 
         def rotate(self, left=False, right=False):
             if left:
                 self.angle += self.rotation_velocity
             elif right:
                 self.angle -= self.rotation_velocity   
+                
         def draw(self, win):
             blit_rotated(win, self.img, (self.x, self.y), self.angle)
+            
         #forward and backward movement     
         def forward(self):
             self.velocity = min(self.velocity + self.acceleration, self.max_velocity)
@@ -111,42 +117,43 @@ def game():
         def backward(self):
             self.velocity = max(self.velocity - self.acceleration, -self.max_velocity/2)
             self.move()
-        #movement based on angle     
+            
+        #movement based on angle         
         def move(self):
             radians = math.radians(self.angle)
             vertical = math.cos(radians) * self.velocity
             horizontal = math.sin(radians) * self.velocity
             self.y -= vertical
             self.x -= horizontal
+            
         #slow down while no gas
         def slowDown(self):
             self.velocity = max(self.velocity - self.acceleration / 2, 0)
             self.move()
+            
         #collision -> two mask compare return x,y of collision  
         def collision(self, mask, x=0, y=0):
             car_mask = pygame.mask.from_surface(self.img)
             offset = (int(self.x - x ), int(self.y - y))
             coli = mask.overlap(car_mask, offset)
             return coli 
-        #bounce - dodelat na nove mape !!!!!  
+        
+        #bounce
         def bounce(self):
             self.velocity = -self.velocity / 1.2
+            
         #checkpoint system 
         def checkpoint(self):
             self.check_P = True
         def checkpointResult(self):
             return self.check_P
         
-        def reset(self):
-                self.x, self.y = self.START_POS
-                self.angle = 0
-                self.vel = 0
-                self.check_P = False 
-        
+    #player car
     class PlayerCar(Abstract):
         IMG = REDCAR
         START_POS = (45, 200)
 
+    #computer car
     class ComputerCar(Abstract):
         IMG = GREENCAR
         START_POS = (70, 200)
@@ -157,14 +164,17 @@ def game():
             self.current_point = 0
             self.velocity = max_velocity
 
+        #drawing points of path
         def draw_points(self, win):
             for point in self.path:
                 pygame.draw.circle(win, (255, 0, 0), point, 5)
-
+                
+        #draw path
         def draw(self, win):
             super().draw(win)
             #self.draw_points(win)
-            
+        
+        #calculation of the angle for the next movement of the car
         def calAngle(self):
             target_x, target_y = self.path[self.current_point]
             x_diff = target_x - self.x
@@ -186,14 +196,15 @@ def game():
                 self.angle -= min(self.rotation_velocity, abs(difference_in_angle))
             else:
                 self.angle += min(self.rotation_velocity, abs(difference_in_angle))
-            
+        
+        #next point if car collide with current point  
         def updatePathPoints(self):
             target = self.path[self.current_point]
             rect = pygame.Rect(
                 self.x, self.y, self.img.get_width(), self.img.get_height())
             if rect.collidepoint(*target):
                 self.current_point += 1
-                
+        
         def move(self):
             if self.current_point >= len(self.path):
                 return
@@ -211,14 +222,15 @@ def game():
     green_car = ComputerCar(3.6,3.6,PATH)
     i = 2000
     
+    #print map
     def map(win,images):
-        #map printing loop 
         for img, position in images:
             win.blit(img, position)
         red_car.draw(win)
         green_car.draw(win)
         pygame.display.update()
-            
+        
+    #player movement   
     def movementOne():
         keys = pygame.key.get_pressed()
         moved = False        
@@ -235,14 +247,16 @@ def game():
             red_car.backward()        
         if not moved:
             red_car.slowDown()
-            
+    
+    #collision 
     def collisionCheck():
         #bounce while collision 
         if red_car.collision(BORDERMASK) != None:
             red_car.bounce()
         else: 
             pass
-        
+    
+    #end 
     def ending(i):
         #checkpoint check -> swap to true 
         check_bool =  red_car.collision(CHECKPOINTMASK, *CHECKPOINTPOSITION)
@@ -254,8 +268,7 @@ def game():
         if computerCar != None:
             i = 1
 
-            
-        #finish line -> race end only if player pick up checkpoint 
+        #finish line -> race ends only if player pick up checkpoint 
         playerCar = red_car.collision(FINISHLINE_MASK, *FINISLINE_POSITION)
         results = red_car.checkpointResult()
         if playerCar != None and results == True:
@@ -271,7 +284,7 @@ def game():
         clock.tick(FPS)
         map(WINDOW, images)  
         
-        #start after player press any key or esc
+        #start after player press any key or esc to exit
         while not gameStart == True:
                 WINDOW.blit(WAIT,(0,250))
                 pygame.display.update()
@@ -282,8 +295,9 @@ def game():
                         results = 2
                         return results
                     elif event.type == pygame.KEYDOWN:
-                        gameStart = True    
-        #close window 
+                        gameStart = True  
+                          
+        #exit
         esc = pygame.key.get_pressed()
         for event in pygame.event.get():
             if event.type == pygame.QUIT or esc[pygame.K_ESCAPE]:
@@ -302,10 +316,12 @@ def game():
     return results
 
 def winLoseScreen(winOrLose):
-    
+   
+    #window
     WINDOW = pygame.display.set_mode((800,600))
     pygame.display.set_caption("Race Game")
     
+    #imgs
     bckgroundImg = scale(pygame.image.load('img/endingbckground.png'), 0.5)
     playImg = pygame.image.load('img/playbtn.png').convert_alpha()
     exitImg = pygame.image.load('img/exitbtn.png').convert_alpha()
@@ -317,9 +333,10 @@ def winLoseScreen(winOrLose):
 
     i = 2000
     while True: 
-        
+        #backgorund print
         WINDOW.blit(bckgroundImg, (0,0))
         
+        #choose the right end of the game 
         if winOrLose == 0:
             WINDOW.blit(winImg, (145,205))
             if exitBtn.draw(WINDOW):
@@ -338,6 +355,7 @@ def winLoseScreen(winOrLose):
                 i = 1
                 break
             
+        #exit 
         esc = pygame.key.get_pressed()
         for event in pygame.event.get():
             if event.type == pygame.QUIT or esc[pygame.K_ESCAPE]:
@@ -348,15 +366,18 @@ def winLoseScreen(winOrLose):
         
     pygame.quit()
     return i 
-    
+ 
+#main loop    
 state = "menu"
 while True:
+    #open menu
     if state == "menu":
         results = menu()
         if results == 0:
             state = "game"
         elif results == 1:
             state = "exit"
+    #open game
     if state == "game":
         results = game()
         if results == 0:
@@ -373,6 +394,7 @@ while True:
                 state = "menu"
         elif results == 2:
             state = "menu"
+    #exit
     if state == "exit":
         break
     
